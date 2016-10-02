@@ -6,4 +6,5 @@ if [ "${machine}" != "armv7l" ]; then
 	exit 1
 fi
 
-bash
+echo "This will run in raspbian environment ${machine}"
+#bash
