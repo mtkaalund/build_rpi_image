@@ -122,6 +122,10 @@ copy_configuration() {
 run_stages() {
 	LANG=C chroot ${rootfs} /scripts/third_stage.sh 
 	LANG=C chroot ${rootfs} /scripts/cleanup.sh
+
+	sync
+	sleep 10
+	cd
 }
 ###################################
 ### 	Main program		###
@@ -140,13 +144,15 @@ create_debian
 copy_configuration
 run_stages
 ### clean up
-umount ${rootfs}/scripts
-umount ${rootfs}/dev/pts
-umount ${rootfs}/dev
-umount ${rootfs}/sys
-umount ${rootfs}/proc
-umount ${bootp}
-umount ${rootp}
+umount -l ${bootp}
+umount -l ${rootfs}/scripts
+umount -l ${rootfs}/dev/pts
+umount -l ${rootfs}/dev
+umount -l ${rootfs}/sys
+umount -l ${rootfs}/proc
+umount -l ${rootp}
+
+dmsetup remove_all
 
 if [ "${image}" != "" ]; then
 	kpartx -d ${image}
