@@ -111,12 +111,44 @@ create_debian() {
 
 copy_configuration() {
 	printf "Copying configs to ${rootfs}\n"
+	mkdir -p ${rootfs}/etc/apt/
+	mkdir -p ${rootfs}/etc/network/
+
 	cat>${rootfs}/etc/apt/sources.list<<-EOF
 	deb ${mirror} ${release} main contrib non-free rpi
 	deb-src ${mirror} ${release} main contrib non-free rpi
 	EOF
 
-	cp -r `pwd`/configs/* ${rootfs}
+	cat>${rootfs}/etc/network/interfaces<<-EOF
+	auto lo
+	iface lo inet loopback
+
+	auto eth0
+	iface eth0 inet dhcp
+	EOF
+
+	cat>${rootfs}/etc/fstab<<-EOF
+	proc			/proc	proc	defaults	0	0
+	/dev/mmcblk0p1		/boot	vfat	defaults	0	0
+	EOF
+
+	cat>${rootfs}/hostname<<-EOF
+	raspberrypi
+	EOF
+	
+	cat>${rootfs}/modules<<-EOF
+	vchiq
+	snd_bcm2835
+	EOF
+
+	cat>${rootfs}/boot/cmdline.txt<<-EOF
+	dwc_otg.lpm_enable=0 console=ttyAMA0,115200 kgdboc=ttyAMA0,115200 console=tty1 root=/dev/mmcblk0p2 rootfstype=ext4 rootwait"
+	EOF
+
+	cat>${rootfs}/debconf.set<<-EOF
+	console-common	console-data/keymap/policy	select Select keymap from full list
+	console-common	console-data/keymap/full	select da-latin1-nodeadkeys
+	EOF
 }
 
 run_stages() {
