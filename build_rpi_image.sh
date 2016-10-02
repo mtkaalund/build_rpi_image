@@ -10,6 +10,7 @@ current_pwd=`pwd`
 buildenv="${current_pwd}/rpi"
 rootfs="${buildenv}/root"
 bootfs="${rootfs}/boot"
+scripts="${current_pwd}/scripts"
 
 current_date=`date +%Y%m%d`
 image_size=4096
@@ -88,6 +89,18 @@ create_debian() {
 	printf "Mounting ${rootp} to ${rootfs}\n"
 	mount ${rootp} ${rootfs}
 
+	printf "Creating directories\n"
+	mkdir -p ${rootfs}/proc
+	mkdir -p ${rootfs}/sys
+	mkdir -p ${rootfs}/dev/pts
+	mkdir -p ${rootfs}/scripts
+
+	mount -t proc none ${rootfs}/proc
+	mount -t sysfs none ${rootfs}/sys
+	mount -o bind /dev ${rootfs}/dev
+	mount -o bind /dev/pts ${rootfs}/dev
+	mount -o bind ${scripts} ${rootfs}/scripts
+
 	debootstrap --foreign --no-check-gpg --include=ca-certificates --arch ${arch} ${release} ${rootfs} ${mirror}
 	printf "Copy qemu-arm-static to ${rootfs}/usr/bin/"
 	cp /usr/bin/qemu-arm-static ${rootfs}/usr/bin/
@@ -104,13 +117,11 @@ copy_configuration() {
 	EOF
 
 	cp -r `pwd`/configs/* ${rootfs}
-
-	cp stages/* ${rootfs}
 }
 
 run_stages() {
-	LANG=C chroot ${rootfs} /third_stage.sh 
-	LANG=C chroot ${rootfs} /cleanup.sh
+	LANG=C chroot ${rootfs} /scripts/third_stage.sh 
+	LANG=C chroot ${rootfs} /scripts/cleanup.sh
 }
 ###################################
 ### 	Main program		###
@@ -129,8 +140,14 @@ create_debian
 copy_configuration
 run_stages
 ### clean up
+umount ${rootfs}/scripts
+umount ${rootfs}/dev/pts
+umount ${rootfs}/dev
+umount ${rootfs}/sys
+umount ${rootfs}/proc
 umount ${bootp}
 umount ${rootp}
+
 if [ "${image}" != "" ]; then
 	kpartx -d ${image}
 	printf "Created image ${image}\n"
