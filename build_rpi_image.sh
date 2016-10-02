@@ -95,6 +95,23 @@ create_debian() {
 	
 	mount ${bootp} ${bootfs}
 }
+
+copy_configuration() {
+	printf "Copying configs to ${rootfs}\n"
+	cat>${rootfs}/etc/apt/sources.list<<-EOF
+	deb ${mirror} ${release} main contrib non-free rpi
+	deb-src ${mirror} ${release} main contrib non-free rpi
+	EOF
+
+	cp -r `pwd`/configs/* ${rootfs}
+
+	cp stages/* ${rootfs}
+}
+
+run_stages() {
+	LANG=C chroot ${rootfs} /third_stage.sh 
+	LANG=C chroot ${rootfs} /cleanup.sh
+}
 ###################################
 ### 	Main program		###
 ###################################
@@ -109,8 +126,12 @@ check_host_packages
 create_image
 format_image
 create_debian
-
+copy_configuration
+run_stages
 ### clean up
 umount ${bootp}
 umount ${rootp}
-kpartx -d ${image}
+if [ "${image}" != "" ]; then
+	kpartx -d ${image}
+	printf "Created image ${image}\n"
+fi
